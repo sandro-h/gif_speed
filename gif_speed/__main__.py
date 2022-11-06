@@ -30,7 +30,7 @@ def main():
     gif = sys.argv[1]
     out_gif = gif.replace(".gif", "-speed.gif")
     speed = sys.argv[2]
-    specials = [s.split(":") for s in sys.argv[3].split(",")] if len(sys.argv) > 3 else []
+    specials = [parse_special(s) for s in sys.argv[3].split(",")] if len(sys.argv) > 3 else []
 
     with open(out_gif, "wb") as out:
         with open(gif, "rb") as in_file:
@@ -64,8 +64,8 @@ def main():
             # Frames
             frame_index = 1
             while marker == GFX_CTRL_EXT_MARKER:
-                special = next((sp for sp in specials if int(sp[0]) == frame_index), None)
-                frame_speed = special[1] if special else speed
+                special = next((sp for sp in specials if sp[0] <= frame_index <= sp[1]), None)
+                frame_speed = special[2] if special else speed
                 read_frame(file, out, frame_speed, frame_index)
                 marker = read_and_write(file, out, 2)
                 frame_index += 1
@@ -74,7 +74,15 @@ def main():
                     raise Exception(f"Expected {GFX_CTRL_EXT_MARKER.hex(' ')} frame marker, or 3b EOF marker")
 
     print(f"Wrote modified GIF to {out_gif}")
-            
+
+
+def parse_special(s):
+    parts = s.split(":")
+    rng = parts[0].split("-")
+    if len(rng) == 1:
+        rng = [rng[0], rng[0]]
+
+    return [int(rng[0]), int(rng[1]), parts[1]]
 
 def read_frame(file, out, speed, frame_index):
     _num_bytes = read_and_write(file, out, 1)
